@@ -339,6 +339,29 @@ export async function getMilestoneHistory(): Promise<MilestoneRecord[]> {
 
 // ---------- Lesson unit progress helpers ----------
 
+/**
+ * Wipes SRS/mastery/attempt/streak/milestone history so every item counts as
+ * never-reviewed again — i.e. everything gets a TeachCard before its next
+ * quiz. Personal deck words and profile settings are left alone; only
+ * *progress on* words resets, not the words themselves.
+ */
+export async function resetAllProgress(): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.itemProgress, db.attempts, db.lessonResults, db.milestones, db.dailyStats, db.domainSkills],
+    async () => {
+      await Promise.all([
+        db.itemProgress.clear(),
+        db.attempts.clear(),
+        db.lessonResults.clear(),
+        db.milestones.clear(),
+        db.dailyStats.clear(),
+        db.domainSkills.clear(),
+      ])
+    },
+  )
+}
+
 export async function getLessonUnitProgress(lessonId: string) {
   const unit = lessonUnits.find((l) => l.id === lessonId)
   if (!unit) return null

@@ -7,6 +7,7 @@ import { isCloudConfigured } from '../../lib/supabaseClient'
 import { signInWithEmail, pushToCloud, pullFromCloud } from '../../lib/sync'
 import { isAiConfigured, saveAnthropicApiKey, clearAnthropicApiKey } from '../../lib/ai'
 import { speechRecognitionSupported, speechSynthesisSupported } from '../../lib/speech'
+import { resetAllProgress } from '../../lib/storage'
 
 function Toggle({ checked, onChange, label, sub }: { checked: boolean; onChange: (v: boolean) => void; label: string; sub?: string }) {
   return (
@@ -33,6 +34,8 @@ export function SettingsPage() {
   const [syncStatus, setSyncStatus] = useState<string | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [apiKeyStatus, setApiKeyStatus] = useState<string | null>(null)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   async function handleSignIn() {
     setAuthStatus('Sending magic link…')
@@ -68,6 +71,16 @@ export function SettingsPage() {
     await clearAnthropicApiKey()
     await updateSettings({ aiFeaturesEnabled: false, anthropicApiKeyStored: false })
     setApiKeyStatus('Removed.')
+  }
+
+  async function handleResetProgress() {
+    if (!confirmingReset) {
+      setConfirmingReset(true)
+      return
+    }
+    setResetting(true)
+    await resetAllProgress()
+    window.location.reload()
   }
 
   return (
@@ -195,6 +208,35 @@ export function SettingsPage() {
             AI features need cloud sync configured first (they use a Supabase Edge Function as a secure proxy — see
             README "AI features setup"). Everything else in the app works fully without this.
           </p>
+        )}
+      </Card>
+
+      <h3 className="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">Danger Zone</h3>
+      <Card className="border-red-900/60">
+        <p className="text-xs text-slate-500">
+          Clears every word's mastery, streaks, lesson grades, and milestone history so everything gets taught again
+          before it's quizzed — as if you were starting fresh. Your added personal words and profile settings are
+          kept. Mainly useful if a lot of progress got recorded before you actually learned those words (e.g. while
+          trying the app out).
+        </p>
+        {confirmingReset ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-sm font-medium text-red-300">
+              Are you sure? This can't be undone{settings.supabaseSyncEnabled ? ' (back up first if you want to keep it)' : ''}.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" fullWidth onClick={() => setConfirmingReset(false)} disabled={resetting}>
+                Cancel
+              </Button>
+              <Button variant="danger" fullWidth onClick={handleResetProgress} disabled={resetting}>
+                {resetting ? 'Resetting…' : 'Yes, reset everything'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button className="mt-3" variant="danger" fullWidth onClick={handleResetProgress}>
+            Reset all learning progress
+          </Button>
         )}
       </Card>
     </div>
