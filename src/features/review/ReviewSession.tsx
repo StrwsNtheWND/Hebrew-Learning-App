@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
 import { ProgressBar } from '../../components/ProgressBar'
 import { Exercise, pickExerciseType, type ExerciseResult } from '../lesson/Exercise'
+import { TeachCard } from '../lesson/TeachCard'
 import { getReviewQueue, getAllVocabIncludingPersonal, recordAttempt, checkAndRecordMilestones } from '../../lib/storage'
 import { useSettings } from '../../state/SettingsContext'
 import type { VocabItem } from '../../types/content'
@@ -19,6 +20,9 @@ export function ReviewSession() {
   const [correctCount, setCorrectCount] = useState(0)
   const [finished, setFinished] = useState(false)
   const [newMilestones, setNewMilestones] = useState<MilestoneRecord[]>([])
+  // A never-reviewed item (no DB row yet — see getReviewQueue) gets a
+  // TeachCard first instead of going straight into a graded exercise.
+  const [phase, setPhase] = useState<'teach' | 'quiz'>('teach')
 
   useEffect(() => {
     Promise.all([getReviewQueue({ limit: 20 }), getAllVocabIncludingPersonal()]).then(([q, p]) => {
@@ -28,10 +32,17 @@ export function ReviewSession() {
   }, [])
 
   const current = queue?.[index]
-  const exerciseType = useMemo(
-    () => (current ? pickExerciseType(current.item, settings.speechEnabled) : 'multiple-choice'),
+  const currentIsNew = current?.progress.lastReviewedAt === null
+
+  useEffect(() => {
+    setPhase(currentIsNew ? 'teach' : 'quiz')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [current?.item.id, settings.speechEnabled],
+  }, [current?.item.id])
+
+  const exerciseType = useMemo(
+    () => (current ? pickExerciseType(current.item, settings.speechEnabled, currentIsNew) : 'multiple-choice'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [current?.item.id, settings.speechEnabled, currentIsNew],
   )
 
   async function handleResult(result: ExerciseResult) {
@@ -115,7 +126,8 @@ export function ReviewSession() {
           {index + 1} / {queue.length}
         </p>
       </div>
-      {current && (
+      {current && phase === 'teach' && <TeachCard item={current.item} onContinue={() => setPhase('quiz')} />}
+      {current && phase === 'quiz' && (
         <Exercise key={current.item.id} item={current.item} distractorPool={pool} exerciseType={exerciseType} onResult={handleResult} />
       )}
     </div>

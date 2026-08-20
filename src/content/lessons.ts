@@ -1,4 +1,5 @@
 import type { LessonUnit } from '../types/content'
+import { binyanConcepts } from './binyanim'
 
 export const lessonUnits: LessonUnit[] = [
   { id: 'lu-safety', domain: 'site-safety', title: 'Site Safety Essentials', description: 'PPE, hazard signage, and accident vocabulary you need on day one.', itemIds: ['cs-01','cs-02','cs-03','cs-04','cs-05','cs-06','cs-07','cs-08','cs-09','cs-10','cs-11','cs-12','cs-13','cs-14','cs-15'], order: 1 },
@@ -12,6 +13,17 @@ export const lessonUnits: LessonUnit[] = [
   { id: 'lu-housing', domain: 'housing', title: 'Housing & Apartments', description: 'Renting, landlords, and the building committee.', itemIds: ['lh-01','lh-02','lh-03','lh-04','lh-05','lh-06','lh-07','lh-08','lh-09','lh-10'], order: 9 },
   { id: 'lu-bureaucracy', domain: 'bureaucracy', title: 'Bureaucracy & Government', description: 'Misrad HaPnim, Bituach Leumi, and the forms every new immigrant needs.', itemIds: ['lg-01','lg-02','lg-03','lg-04','lg-05','lg-06','lg-07','lg-08','lg-09','lg-10'], order: 10 },
   { id: 'lu-daily', domain: 'daily-life', title: 'Daily Life Basics', description: 'Polite essentials and everyday survival phrases.', itemIds: ['ld-01','ld-02','ld-03','ld-04','ld-05','ld-06','ld-07','ld-08','ld-09','ld-10'], order: 11 },
+
+  // Verb patterns (binyanim) — each unit teaches the pattern via a
+  // ConceptCard before drilling its example verbs, since quizzing an
+  // unexplained conjugation pattern isn't fair practice.
+  { id: 'lu-binyan-paal', domain: 'binyanim', title: "Pa'al — Simple Active", description: "The default verb pattern: write, learn, live.", itemIds: ['bp-01', 'bp-02', 'bp-03'], order: 12, concept: binyanConcepts.paal },
+  { id: 'lu-binyan-nifal', domain: 'binyanim', title: "Nif'al — Passive / Reflexive", description: 'Something happens to the subject: break, enter, meet.', itemIds: ['bn-01', 'bn-02', 'bn-03'], order: 13, concept: binyanConcepts.nifal },
+  { id: 'lu-binyan-piel', domain: 'binyanim', title: "Pi'el — Intensive Active", description: 'Speak, request, hike — a very common everyday pattern.', itemIds: ['bi-01', 'bi-02', 'bi-03'], order: 14, concept: binyanConcepts.piel },
+  { id: 'lu-binyan-pual', domain: 'binyanim', title: "Pu'al — Passive of Pi'el", description: "Cooked, translated, photographed — mostly third person.", itemIds: ['bu-01', 'bu-02', 'bu-03'], order: 15, concept: binyanConcepts.pual },
+  { id: 'lu-binyan-hifil', domain: 'binyanim', title: "Hif'il — Causative Active", description: 'Making something happen: explain, invite, feel.', itemIds: ['bh-01', 'bh-02', 'bh-03'], order: 16, concept: binyanConcepts.hifil },
+  { id: 'lu-binyan-hufal', domain: 'binyanim', title: "Huf'al — Passive of Hif'il", description: 'Explained, invited, felt — the passive side of Hif\'il.', itemIds: ['bf-01', 'bf-02', 'bf-03'], order: 17, concept: binyanConcepts.hufal },
+  { id: 'lu-binyan-hitpael', domain: 'binyanim', title: "Hitpa'el — Reflexive / Reciprocal", description: 'Get dressed, shower, train — actions done to/for yourself.', itemIds: ['bt-01', 'bt-02', 'bt-03'], order: 18, concept: binyanConcepts.hitpael },
 ]
 
 /** Milestones are earned automatically from real progress data — not arbitrary badges. */
@@ -19,7 +31,14 @@ export interface MilestoneDef {
   id: string
   label: string
   detail: string
-  check: (stats: { wordsMastered: number; lessonsCompleted: number; scenariosCompleted: number; longestStreakDays: number; domainsAtStrong: number }) => boolean
+  check: (stats: {
+    wordsMastered: number
+    lessonsCompleted: number
+    scenariosCompleted: number
+    longestStreakDays: number
+    domainsAtStrong: number
+    binyanLessonsCompleted: number
+  }) => boolean
 }
 
 export const milestoneDefs: MilestoneDef[] = [
@@ -27,7 +46,8 @@ export const milestoneDefs: MilestoneDef[] = [
   { id: 'words-150', label: '150 Words Learned', detail: 'A real working vocabulary — 150 words in progress or mastered.', check: (s) => s.wordsMastered >= 150 },
   { id: 'words-300', label: '300 Words Learned', detail: 'Full starter deck territory — 300 words in progress or mastered.', check: (s) => s.wordsMastered >= 300 },
   { id: 'lessons-5', label: '5 Lessons Completed', detail: 'Five lesson units finished start to finish.', check: (s) => s.lessonsCompleted >= 5 },
-  { id: 'lessons-all', label: 'Full Curriculum Covered', detail: 'Every starter lesson unit completed at least once.', check: (s) => s.lessonsCompleted >= 11 },
+  { id: 'lessons-all', label: 'Full Curriculum Covered', detail: 'Every starter lesson unit completed at least once.', check: (s) => s.lessonsCompleted >= 18 },
+  { id: 'binyanim-all', label: 'All 7 Binyanim Practiced', detail: "You've worked through every Hebrew verb pattern at least once.", check: (s) => s.binyanLessonsCompleted >= 7 },
   { id: 'scenario-1', label: 'First Mock Conversation', detail: 'Completed your first simulated work conversation.', check: (s) => s.scenariosCompleted >= 1 },
   { id: 'scenario-10', label: '10 Mock Conversations', detail: "Ten simulated conversations down — that's real fluency practice.", check: (s) => s.scenariosCompleted >= 10 },
   { id: 'streak-7', label: '7-Day Streak', detail: 'Seven consecutive days of practice.', check: (s) => s.longestStreakDays >= 7 },

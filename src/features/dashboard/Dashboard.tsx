@@ -51,6 +51,8 @@ export function Dashboard() {
   }, [])
 
   const move = daysUntil(settings.moveDate)
+  const vocabLessons = lessonUnits.filter((u) => u.domain !== 'binyanim')
+  const binyanLessons = lessonUnits.filter((u) => u.domain === 'binyanim')
 
   return (
     <div className="mx-auto max-w-md px-4 pb-24 pt-4">
@@ -94,27 +96,45 @@ export function Dashboard() {
         </div>
       )}
 
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Lessons</h3>
-      <div className="space-y-2">
-        {lessonUnits.map((unit) => (
-          <button
-            key={unit.id}
-            onClick={() => navigate(`/lesson/${unit.id}`)}
-            className="block w-full text-left"
-          >
-            <Card className="hover:border-amber-500/40">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-100">{unit.title}</p>
-                  <p className="truncate text-xs text-slate-500">{DOMAIN_LABELS[unit.domain]}</p>
-                  <ProgressBar value={lessonProgress[unit.id] ?? 0} className="mt-2" />
-                </div>
-                <span className="text-xs font-medium text-slate-400">{Math.round(lessonProgress[unit.id] ?? 0)}%</span>
+      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Vocabulary Lessons</h3>
+      <LessonList units={vocabLessons} progress={lessonProgress} onOpen={(id) => navigate(`/lesson/${id}`)} />
+
+      <h3 className="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        Verb Patterns (Binyanim)
+      </h3>
+      <p className="mb-2 text-xs text-slate-500">
+        Learn the 7 templates Hebrew verbs are built from — each lesson explains the pattern before quizzing it.
+      </p>
+      <LessonList units={binyanLessons} progress={lessonProgress} onOpen={(id) => navigate(`/lesson/${id}`)} />
+    </div>
+  )
+}
+
+function LessonList({
+  units,
+  progress,
+  onOpen,
+}: {
+  units: typeof lessonUnits
+  progress: Record<string, number>
+  onOpen: (id: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      {units.map((unit) => (
+        <button key={unit.id} onClick={() => onOpen(unit.id)} className="block w-full text-left">
+          <Card className="hover:border-amber-500/40">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-100">{unit.title}</p>
+                <p className="truncate text-xs text-slate-500">{DOMAIN_LABELS[unit.domain]}</p>
+                <ProgressBar value={progress[unit.id] ?? 0} className="mt-2" />
               </div>
-            </Card>
-          </button>
-        ))}
-      </div>
+              <span className="text-xs font-medium text-slate-400">{Math.round(progress[unit.id] ?? 0)}%</span>
+            </div>
+          </Card>
+        </button>
+      ))}
     </div>
   )
 }

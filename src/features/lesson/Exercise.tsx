@@ -23,7 +23,19 @@ function shuffle<T>(arr: T[]): T[] {
   return copy
 }
 
-export function pickExerciseType(item: VocabItem, speechEnabled: boolean): ExerciseType {
+/**
+ * The first time an item is quizzed (right after its TeachCard), stick to
+ * recognition — multiple-choice / listening — rather than production
+ * (typed / speaking). Recalling a word you just saw once by ear or by sight
+ * is reasonable; typing or speaking it correctly from memory usually isn't.
+ * Production exercises unlock once the item has been reviewed before.
+ */
+export function pickExerciseType(item: VocabItem, speechEnabled: boolean, isNew = false): ExerciseType {
+  if (isNew) {
+    if (item.kind === 'sentence') return 'listening'
+    return speechEnabled && Math.random() > 0.5 ? 'listening' : 'multiple-choice'
+  }
+
   const pool: ExerciseType[] = ['multiple-choice', 'typed']
   if (speechEnabled) pool.push('listening')
   if (speechEnabled && speechRecognitionSupported()) pool.push('speaking')

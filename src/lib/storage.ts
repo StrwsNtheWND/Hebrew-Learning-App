@@ -258,6 +258,7 @@ export interface DashboardStats {
   wordsInProgress: number
   totalWordsAvailable: number
   lessonsCompleted: number
+  binyanLessonsCompleted: number
   scenariosCompleted: number
   currentStreak: number
   longestStreak: number
@@ -279,7 +280,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   const wordsMastered = progressList.filter((p) => p.mastery >= 65).length
   const wordsInProgress = progressList.filter((p) => p.mastery > 0 && p.mastery < 65).length
-  const completedLessonIds = new Set(lessonResults.filter((r) => r.percentage >= 70).map((r) => r.lessonId))
+  const passedResults = lessonResults.filter((r) => r.percentage >= 70)
+  const completedLessonIds = new Set(passedResults.map((r) => r.lessonId))
+  const binyanLessonIds = new Set(passedResults.filter((r) => r.domain === 'binyanim').map((r) => r.lessonId))
   const domainsAtStrong = domainSkills.filter((d) => d.rollingAccuracy >= 0.8).length
 
   return {
@@ -287,6 +290,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     wordsInProgress,
     totalWordsAvailable: vocab.length,
     lessonsCompleted: completedLessonIds.size,
+    binyanLessonsCompleted: binyanLessonIds.size,
     scenariosCompleted: scenarioCount,
     currentStreak: streak.currentStreak,
     longestStreak: streak.longestStreak,
@@ -318,6 +322,7 @@ export async function checkAndRecordMilestones(): Promise<MilestoneRecord[]> {
         scenariosCompleted: stats.scenariosCompleted,
         longestStreakDays: stats.longestStreak,
         domainsAtStrong: stats.domainsAtStrong,
+        binyanLessonsCompleted: stats.binyanLessonsCompleted,
       })
     ) {
       const record: MilestoneRecord = { id: uid(), milestoneId: def.id, achievedAt: Date.now(), label: def.label, detail: def.detail }

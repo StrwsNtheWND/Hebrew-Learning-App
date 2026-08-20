@@ -14,6 +14,7 @@ export type Domain =
   | 'bureaucracy'
   | 'daily-life'
   | 'core-grammar'
+  | 'binyanim'
   | 'personal'
 
 export const DOMAIN_LABELS: Record<Domain, string> = {
@@ -28,6 +29,7 @@ export const DOMAIN_LABELS: Record<Domain, string> = {
   bureaucracy: 'Bureaucracy & Government',
   'daily-life': 'Daily Life',
   'core-grammar': 'Core Grammar',
+  binyanim: 'Verb Patterns (Binyanim)',
   personal: 'My Words',
 }
 
@@ -58,6 +60,28 @@ export interface VocabItem {
   difficulty: 1 | 2 | 3 | 4 | 5
 }
 
+export interface ConjugationRow {
+  person: string // e.g. "I (m./f.)", "he", "they"
+  hebrew: string
+  transliteration: string
+}
+
+/**
+ * A grammar explainer shown once before a lesson's practice items — used for
+ * the binyanim (verb pattern) lessons, where the learner needs the *pattern*
+ * explained before drilling example verbs makes any sense.
+ */
+export interface GrammarConcept {
+  title: string
+  hebrewName: string
+  meaning: string // what this pattern is for, in plain English
+  explanation: string
+  exampleRoot: string // the shoresh (root), e.g. "כ-ת-ב"
+  exampleInfinitive: { hebrew: string; transliteration: string; english: string }
+  presentTense: ConjugationRow[]
+  pastExample?: { hebrew: string; transliteration: string; english: string }
+}
+
 export interface LessonUnit {
   id: string
   domain: Domain
@@ -65,6 +89,7 @@ export interface LessonUnit {
   description: string
   itemIds: string[]
   order: number
+  concept?: GrammarConcept
 }
 
 export interface ScenarioTurn {
