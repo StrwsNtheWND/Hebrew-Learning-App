@@ -7,20 +7,12 @@ import { HebrewText } from '../../components/HebrewText'
 import { gradeAnswer } from '../../lib/grading'
 import { speakHebrew, speechRecognitionSupported, listenOnce } from '../../lib/speech'
 import { useSettings } from '../../state/SettingsContext'
+import { shuffle } from '../../lib/random'
 
 export interface ExerciseResult {
   exerciseType: ExerciseType
   correct: boolean
   score: number
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-  return copy
 }
 
 /**

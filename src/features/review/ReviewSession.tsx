@@ -7,6 +7,7 @@ import { ProgressBar } from '../../components/ProgressBar'
 import { Exercise, pickExerciseType, type ExerciseResult } from '../lesson/Exercise'
 import { TeachCard } from '../lesson/TeachCard'
 import { getReviewQueue, getAllVocabIncludingPersonal, recordAttempt, checkAndRecordMilestones } from '../../lib/storage'
+import { buildLessonPlan, countQuizSteps, type LessonStep } from '../../lib/lessonPlan'
 import { useSettings } from '../../state/SettingsContext'
 import type { VocabItem } from '../../types/content'
 import type { ItemProgress, MilestoneRecord } from '../../types/progress'
@@ -16,56 +17,56 @@ export function ReviewSession() {
   const { settings } = useSettings()
   const [queue, setQueue] = useState<{ item: VocabItem; progress: ItemProgress }[] | null>(null)
   const [pool, setPool] = useState<VocabItem[]>([])
-  const [index, setIndex] = useState(0)
+  const [plan, setPlan] = useState<LessonStep[] | null>(null)
+  const [stepIndex, setStepIndex] = useState(0)
+  const [quizAnswered, setQuizAnswered] = useState(0)
   const [correctCount, setCorrectCount] = useState(0)
   const [finished, setFinished] = useState(false)
   const [newMilestones, setNewMilestones] = useState<MilestoneRecord[]>([])
-  // A never-reviewed item (no DB row yet — see getReviewQueue) gets a
-  // TeachCard first instead of going straight into a graded exercise.
-  const [phase, setPhase] = useState<'teach' | 'quiz'>('teach')
 
   useEffect(() => {
     Promise.all([getReviewQueue({ limit: 20 }), getAllVocabIncludingPersonal()]).then(([q, p]) => {
       setQueue(q)
       setPool(p)
+      // Never-reviewed items (no DB row — see getReviewQueue) get taught in
+      // a batch first, then quizzed back in shuffled order; already-due
+      // items go straight into their own shuffled quiz round.
+      const isNewById = new Map(q.map((entry) => [entry.item.id, entry.progress.lastReviewedAt === null]))
+      setPlan(buildLessonPlan(q.map((entry) => entry.item), (id) => isNewById.get(id) ?? false))
     })
   }, [])
 
-  const current = queue?.[index]
-  const currentIsNew = current?.progress.lastReviewedAt === null
-
-  useEffect(() => {
-    setPhase(currentIsNew ? 'teach' : 'quiz')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.item.id])
+  const step = plan?.[stepIndex]
+  const totalQuizSteps = plan ? countQuizSteps(plan) : 0
 
   const exerciseType = useMemo(
-    () => (current ? pickExerciseType(current.item, settings.speechEnabled, currentIsNew) : 'multiple-choice'),
+    () => (step?.item ? pickExerciseType(step.item, settings.speechEnabled, step.isNew) : 'multiple-choice'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [current?.item.id, settings.speechEnabled, currentIsNew],
+    [step?.item.id, step?.type, settings.speechEnabled, step?.isNew],
   )
 
   async function handleResult(result: ExerciseResult) {
-    if (!current || !queue) return
+    if (!step || !plan) return
     await recordAttempt({
-      itemId: current.item.id,
-      domain: current.item.domain,
+      itemId: step.item.id,
+      domain: step.item.domain,
       exerciseType: result.exerciseType,
       correct: result.correct,
       score: result.score,
     })
     if (result.correct) setCorrectCount((c) => c + 1)
+    setQuizAnswered((n) => n + 1)
 
-    if (index + 1 >= queue.length) {
+    if (stepIndex + 1 >= plan.length) {
       const milestones = await checkAndRecordMilestones()
       setNewMilestones(milestones)
       setFinished(true)
     } else {
-      setIndex((i) => i + 1)
+      setStepIndex((i) => i + 1)
     }
   }
 
-  if (queue === null) {
+  if (queue === null || plan === null) {
     return (
       <div className="mx-auto max-w-md px-4 pt-4">
         <TopBar title="Review" onBack />
@@ -89,7 +90,7 @@ export function ReviewSession() {
   }
 
   if (finished) {
-    const pct = Math.round((correctCount / queue.length) * 100)
+    const pct = totalQuizSteps === 0 ? 0 : Math.round((correctCount / totalQuizSteps) * 100)
     return (
       <div className="mx-auto max-w-md px-4 pb-24 pt-4">
         <TopBar title="Review" onBack />
@@ -97,7 +98,7 @@ export function ReviewSession() {
           <p className="text-sm text-slate-400">Session complete</p>
           <p className="mt-2 text-4xl font-bold text-amber-400">{pct}%</p>
           <p className="mt-1 text-slate-300">
-            {correctCount} / {queue.length} correct
+            {correctCount} / {totalQuizSteps} correct
           </p>
         </Card>
         {newMilestones.length > 0 && (
@@ -117,18 +118,27 @@ export function ReviewSession() {
     )
   }
 
+  if (!step) return null
+
   return (
     <div className="mx-auto max-w-md px-4 pb-24 pt-4">
       <TopBar title="Review" onBack />
       <div className="mt-3 mb-4">
-        <ProgressBar value={(index / queue.length) * 100} />
-        <p className="mt-1 text-xs text-slate-500">
-          {index + 1} / {queue.length}
-        </p>
+        {step.type === 'teach' ? (
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-500/80">Learning new words…</p>
+        ) : (
+          <>
+            <ProgressBar value={(quizAnswered / totalQuizSteps) * 100} />
+            <p className="mt-1 text-xs text-slate-500">
+              Question {quizAnswered + 1} / {totalQuizSteps}
+            </p>
+          </>
+        )}
       </div>
-      {current && phase === 'teach' && <TeachCard item={current.item} onContinue={() => setPhase('quiz')} />}
-      {current && phase === 'quiz' && (
-        <Exercise key={current.item.id} item={current.item} distractorPool={pool} exerciseType={exerciseType} onResult={handleResult} />
+      {step.type === 'teach' ? (
+        <TeachCard item={step.item} onContinue={() => setStepIndex((i) => i + 1)} />
+      ) : (
+        <Exercise key={`${step.item.id}-${stepIndex}`} item={step.item} distractorPool={pool} exerciseType={exerciseType} onResult={handleResult} />
       )}
     </div>
   )
